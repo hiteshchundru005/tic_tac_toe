@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Neon Tic Tac Toe</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+      font-family: 'Orbitron', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      color: #00ffe7;
+    }
+    h1 {
+      margin-bottom: 20px;
+      text-shadow: 0 0 15px #00ffe7;
+      font-size: 3rem;
+    }
+    select, button {
+      font-family: 'Orbitron', sans-serif;
+      margin-top: 10px;
+      background: #00ffe7;
+      border: none;
+      border-radius: 20px;
+      padding: 10px 20px;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 0 10px #00ffe7;
+      transition: background 0.3s;
+    }
+    button:hover, select:hover {
+      background: #00cccc;
+    }
+    .board-container {
+      position: relative;
+      width: 320px;
+      height: 320px;
+      margin: 20px 0;
+    }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-gap: 10px;
+      width: 100%;
+      height: 100%;
+    }
+    .cell {
+      background: #111;
+      border: 2px solid #00ffe7;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      color: #00ffe7;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .cell:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 15px #00ffe7;
+    }
+    svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 320px;
+      height: 320px;
+      pointer-events: none;
+    }
+    line {
+      stroke: #ff00cc;
+      stroke-width: 6;
+      stroke-dasharray: 1000;
+      stroke-dashoffset: 1000;
+      animation: draw 0.6s forwards ease-out;
+    }
+    @keyframes draw {
+      to { stroke-dashoffset: 0; }
+    }
+    .status {
+      font-size: 1.2rem;
+      margin-bottom: 10px;
+      text-shadow: 0 0 10px #00ffe7;
+    }
+  </style>
+</head>
+<body>
+  <h1>Neon Tic Tac Toe</h1>
+  <div>
+    <label for="difficulty">Difficulty:</label>
+    <select id="difficulty">
+      <option value="easy">Easy</option>
+      <option value="medium">Medium</option>
+      <option value="hard">Hard</option>
+    </select>
+  </div>
+  <div class="board-container">
+    <div class="board" id="board"></div>
+    <svg id="winSVG"><line id="winLine" x1="0" y1="0" x2="0" y2="0"/></svg>
+  </div>
+  <p class="status" id="status">Player X's Turn</p>
+  <button id="resetBtn">Restart Game</button>
+
+  <script>
+    const board = document.getElementById("board");
+    const statusText = document.getElementById("status");
+    const resetBtn = document.getElementById("resetBtn");
+    const difficultySelect = document.getElementById("difficulty");
+    const winLine = document.getElementById("winLine");
+
+    let currentPlayer = "X";
+    let gameActive = true;
+    let gameState = Array(9).fill("");
+    let difficulty = "easy";
+
+    const winCombos = [
+      [0,1,2],[3,4,5],[6,7,8],
+      [0,3,6],[1,4,7],[2,5,8],
+      [0,4,8],[2,4,6]
+    ];
+
+    const cellPositions = [
+      [53, 53],[160,53],[267,53],
+      [53,160],[160,160],[267,160],
+      [53,267],[160,267],[267,267]
+    ];
+
+    function renderBoard() {
+      board.innerHTML = "";
+      gameState.forEach((val, i) => {
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        cell.dataset.index = i;
+        cell.textContent = val;
+        cell.addEventListener("click", handleClick);
+        board.appendChild(cell);
+      });
+    }
+
+    function handleClick(e) {
+      const index = e.target.dataset.index;
+      if (!gameActive || gameState[index]) return;
+      makeMove(index, currentPlayer);
+      checkResult();
+      if (gameActive && currentPlayer === "O") setTimeout(botMove, 400);
+    }
+
+    function makeMove(index, player) {
+      gameState[index] = player;
+      renderBoard();
+      currentPlayer = player === "X" ? "O" : "X";
+      statusText.textContent = `Player ${currentPlayer}'s Turn`;
+    }
+
+    function checkResult() {
+      for (let combo of winCombos) {
+        const [a,b,c] = combo;
+        if (gameState[a] && gameState[a] === gameState[b] && gameState[a] === gameState[c]) {
+          gameActive = false;
+          statusText.textContent = `Player ${gameState[a]} Wins!`;
+          drawLine(combo);
+          return;
+        }
+      }
+      if (!gameState.includes("")) {
+        statusText.textContent = "It's a Draw!";
+        gameActive = false;
+      }
+    }
+
+    function drawLine([a, , c]) {
+      const [x1,y1] = cellPositions[a];
+      const [x2,y2] = cellPositions[c];
+      winLine.setAttribute("x1", x1);
+      winLine.setAttribute("y1", y1);
+      winLine.setAttribute("x2", x2);
+      winLine.setAttribute("y2", y2);
+    }
+
+    function botMove() {
+      let move;
+      if (difficulty === "easy") move = getRandomMove();
+      else if (difficulty === "medium") move = getMediumMove();
+      else move = getBestMove("O");
+      if (move !== undefined) {
+        makeMove(move, "O");
+        checkResult();
+      }
+    }
+
+    function getRandomMove() {
+      const empty = gameState.map((v,i)=>v==""?i:null).filter(i=>i!==null);
+      return empty[Math.floor(Math.random()*empty.length)];
+    }
+
+    function getMediumMove() {
+      for (let combo of winCombos) {
+        const [a,b,c] = combo;
+        const vals = [gameState[a], gameState[b], gameState[c]];
+        if (vals.filter(v=>v==="X").length === 2 && vals.includes("")) {
+          return combo[vals.indexOf("")];
+        }
+      }
+      return getRandomMove();
+    }
+
+    function getBestMove(player) {
+      const opponent = player === "X" ? "O" : "X";
+
+      function minimax(state, isMax) {
+        const winner = evaluate(state);
+        if (winner !== null) return score(winner);
+        const moves = state.map((v,i)=>v===""?i:null).filter(i=>i!==null);
+        if (isMax) {
+          let maxEval = -Infinity;
+          for (let m of moves) {
+            state[m] = player;
+            let evalScore = minimax(state, false);
+            state[m] = "";
+            maxEval = Math.max(maxEval, evalScore);
+          }
+          return maxEval;
+        } else {
+          let minEval = Infinity;
+          for (let m of moves) {
+            state[m] = opponent;
+            let evalScore = minimax(state, true);
+            state[m] = "";
+            minEval = Math.min(minEval, evalScore);
+          }
+          return minEval;
+        }
+      }
+
+      function evaluate(state) {
+        for (let [a,b,c] of winCombos) {
+          if (state[a] && state[a] === state[b] && state[b] === state[c]) return state[a];
+        }
+        return state.includes("") ? null : "draw";
+      }
+
+      function score(res) {
+        if (res === player) return 1;
+        if (res === "draw") return 0;
+        return -1;
+      }
+
+      let best;
+      let bestVal = -Infinity;
+      gameState.forEach((val, i) => {
+        if (val === "") {
+          gameState[i] = player;
+          let moveVal = minimax(gameState, false);
+          gameState[i] = "";
+          if (moveVal > bestVal) {
+            bestVal = moveVal;
+            best = i;
+          }
+        }
+      });
+      return best;
+    }
+
+    resetBtn.onclick = () => {
+      currentPlayer = "X";
+      gameState = Array(9).fill("");
+      gameActive = true;
+      statusText.textContent = `Player ${currentPlayer}'s Turn`;
+      winLine.setAttribute("x1", 0);
+      winLine.setAttribute("y1", 0);
+      winLine.setAttribute("x2", 0);
+      winLine.setAttribute("y2", 0);
+      renderBoard();
+    }
+
+    difficultySelect.onchange = () => difficulty = difficultySelect.value;
+    renderBoard();
+  </script>
+</body>
+</html>
